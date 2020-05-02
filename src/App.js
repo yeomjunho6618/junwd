@@ -156,6 +156,12 @@ class App extends Component{
               <li>bignumber.js </li>  
               <li>navigator.geolocation</li>
             </ol>
+
+            <strong>관련 api 목록</strong><br/><br/>
+            <ol>
+              <li>공공데이터포털: https://www.data.go.kr/</li>
+              <li>daum api: https://apis.map.kakao.com/web/documentation/</li>
+            </ol>
           </section>
       </article>
     );
