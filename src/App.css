@@ -20,3 +20,10 @@ article{
   min-height:80vh;  
   box-sizing: border-box;
 }
+.install_list{
+  text-align: left;
+  word-wrap: break-word;
+}
+.list{
+  padding: 10px 20px;
+}

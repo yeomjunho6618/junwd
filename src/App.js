@@ -7,46 +7,55 @@ import axios, {AxiosInstance} from 'axios';
 import BigNumber from 'bignumber.js';
 import _ from 'lodash';
 
-const level = [
-  {1: 20}, {2: 30}, {3: 50}, {4: 100}, {5: 250}, {6: 500}, {7: 1000}, {8: 2000}, {9: 4000}, {10: 8000},
-];
-const daumKey = 'd32eb3adc7a497f5249517f9cf976996',//다음 key
-      {kakao} = window,
-      httpService = axios.create({
-        baseURL: 'https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/',
-        headers:{
-          'Content-Type': 'application/json;charset=UTF-8'
-        }
-      });
-
+const {kakao} = window;
 class App extends Component{
+  level = [
+    {1: 20}, {2: 30}, {3: 50}, {4: 100}, {5: 250}, {6: 500}, {7: 1000}, {8: 2000}, {9: 4000}, {10: 8000},
+  ];
+  daumKey = 'd32eb3adc7a497f5249517f9cf976996';//다음 key  
+  baseURL = 'https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/';
+  // httpService = axios.create({
+  //   baseURL: 'https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/',
+  //   headers:{
+  //     'Content-Type': 'application/json;charset=UTF-8'
+  //   }
+  // });
+
   constructor(props) {
       super(props);
   }
 
   state = {
+    first: 0,//처음map load
     levelIndex: 4,//level index
     getCoordsType: false,//위치정보 동의
     coords: {lat: 37.5071359, lng: 127.0342994},//위치 37.5071359 127.0342994
-    m: level[4],//거리(m)
+    m: this.level[4][5],//거리(m)
     mapLoad: false,//kakao.maps.load 체크
     dataStoresByGeo: []//data storesByGeo
   }
   //@observable private dataStoresByGeo:[] = [];
-
+  
   componentDidMount(){
     this.onGeolocation();//위치 요청
     this.ajaxStoresByGeo && this.ajaxStoresByGeo();//공공데이터 포털 api
     kakao.maps.load(this.onDaumMap);//daum map
   }
 
-  ajaxStoresByGeo: AxiosInstance = () => {
+  // async get(url, params){
+  //   console.log(url, params);
+  //   const response = await this.AxiosInstance.get(url, {params: {...params}});
+  //   return await response;
+  // }
+
+  ajaxStoresByGeo = () => {
     const {coords, m} = this.state;
-    httpService.get('storesByGeo/json', {
+    //console.log('[ajax]', coords);
+    axios.get(`${this.baseURL}storesByGeo/json`, {params:{
       lat: coords.lat,
       lng: coords.lng,
       m: m
-    }).then(res => {
+    }}).then(res => {
       if(res.status === 200){
         this.setState({
           dataStoresByGeo: res.data.stores
@@ -100,16 +109,38 @@ class App extends Component{
 
       return {
         title: a.name,
-        latlng: new kakao.maps.LatLng(a.lat, a.lng),
-        //_: a
+        latlng: new kakao.maps.LatLng(a.lat, a.lng)
       };
     });
     
     // LatLngBounds 객체에 추가된 좌표들을 기준으로 지도의 범위를 재설정합니다
     // 이때 지도의 중심좌표와 레벨이 변경될 수 있습니다
-    map.setBounds(bounds);
+    const {first} = this.state;
+    if(first < 2){
+      map.setBounds(bounds);
+      this.setState({
+        first: first + 1
+      });
+    }    
+
+    //위치 이동시 setTime으로 체크후 위치 가져와서 다시 로드
+    let fnSetTimeGeo;
+    const that = this;
     kakao.maps.event.addListener(map, 'center_changed', function() {
-      console.log('center changed!');
+      fnSetTimeGeo && clearTimeout(fnSetTimeGeo);
+      fnSetTimeGeo = setTimeout(() => {
+        //that.onGeolocation();
+        const mapCenter = map.getCenter(),
+              mapLevel = map.getLevel();
+
+        //console.log('[move]',{lat: mapCenter.Ha, lng: mapCenter.Ga}, mapLevel);
+        that.setState({
+          levelIndex: mapLevel,
+          m: that.level[mapLevel][mapLevel+1],
+          coords: {lat: mapCenter.Ha, lng: mapCenter.Ga}
+        });
+        that.ajaxStoresByGeo();
+      }, 1000);
     });
   }
 
@@ -117,7 +148,6 @@ class App extends Component{
     /* 위치정보 사용 가능 */
     if('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition((position) => {
-        //console.log(position.coords.latitude,' | ', position.coords.longitude);
         this.setState({
           getCoordsType: true,
           coords: {
@@ -143,9 +173,9 @@ class App extends Component{
           </section>
         }
         <section id="map" className="map_box"></section>
-        <section style={{textAlign: 'left'}}>
-            <strong>install 목록</strong><br/><br/>
-            <ol>
+        <section className={'install_list'}>
+            <strong>install 목록</strong><br/>
+            <ol className={'list'}>
               <li>axios => ajax</li>
               <li>mox</li>
               <li>mobx-decorators</li>
@@ -156,9 +186,10 @@ class App extends Component{
               <li>bignumber.js </li>  
               <li>navigator.geolocation</li>
             </ol>
+            <br/><br/>
 
-            <strong>관련 api 목록</strong><br/><br/>
-            <ol>
+            <strong>관련 api 목록</strong><br/>
+            <ol className={'list'}>
               <li>공공데이터포털: https://www.data.go.kr/</li>
               <li>daum api: https://apis.map.kakao.com/web/documentation/</li>
             </ol>
@@ -166,7 +197,6 @@ class App extends Component{
       </article>
     );
   }
-
 }
 
 export default App;
